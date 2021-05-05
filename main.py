@@ -13,7 +13,8 @@ model = SoftNBDT(
   pretrained=True,
   dataset='CIFAR10',
   arch='wrn28_10_cifar10',
-  model=model)
+  model=model,
+  hierarchy='wordnet')
 
 transforms = transforms.Compose([
   transforms.Resize(32),
@@ -31,11 +32,13 @@ def file_selector(folder_path='.'):
 
 
 if __name__ == '__main__':
+
+    st.title('interpretable object recognition with NBDT')
     # Select a file
     if st.checkbox('Select a file in current directory'):
-        folder_path = '.'
-        if st.checkbox('Change directory'):
-            folder_path = st.text_input('Enter folder path', '.')
+        folder_path = './data'
+        # if st.checkbox('Change directory'):
+        #     folder_path = st.text_input('Enter folder path', '.')
         filename = file_selector(folder_path=folder_path)
         st.write('You selected `%s`' % filename)
         st.image(filename, caption='3 marla plot')
@@ -43,15 +46,36 @@ if __name__ == '__main__':
 
         im = load_image_from_path(filename)
         x = transforms(im)[None]
-        st.write(x.shape)
 
         # run inference
         outputs = model(
             x)  # to get intermediate decisions, use `model.forward_with_decisions(x)` and add `hierarchy='wordnet' to SoftNBDT
-        _, predicted = outputs.max(1)
+        st.write(outputs)
+        st.write(outputs[0])
+        st.write(outputs[0][0])
+
+        confidence, predicted = outputs.max(1)
+        st.write(outputs.max(1))
+
         cls = DATASET_TO_CLASSES['CIFAR10'][predicted[0]]
 
-        st.write(cls)
+        st.write(f"prediction is {cls} with confidence {confidence.cpu().detach().numpy()[0]}")
+
+        # now with hierarchy
+        outputs = model.forward_with_decisions(x)
+        st.write(outputs)
+        st.write(outputs[1])
+        st.write(outputs[1][0])
+
+
+
+        pred = outputs[1]
+        # confidence, predicted = pred.max(1)
+        confidence, predicted = pred.max(1)
+        # cls = DATASET_TO_CLASSES['CIFAR10'][predicted[0]]
+
+        predicted = [DATASET_TO_CLASSES['CIFAR10'][p] for p in predicted]
+        st.write(f'prediction = {predicted}')
 
 
     # TODO: Add code to open and process your image file
